@@ -17,9 +17,11 @@ app = FastAPI()
 fingerprint_db = []
 track_counter = 1
 
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
 
 @app.post("/ingest")
 async def ingest(files: List[UploadFile] = File(...)):
@@ -32,6 +34,7 @@ async def ingest(files: List[UploadFile] = File(...)):
         try:
             contents = await file.read()
             import io
+
             audio, sr = librosa.load(io.BytesIO(contents), sr=11025, mono=True)
         except Exception as e:
             continue  # Skip file on error, but continue with others
@@ -42,13 +45,15 @@ async def ingest(files: List[UploadFile] = File(...)):
         if norm > 0:
             audio = audio / norm
 
-        #Store
-        fingerprint_db.append({
-            "id": track_counter,
-            "filename": file.filename,
-            "fingerprint": audio,
-            "sr": sr,
-        })
+        # Store
+        fingerprint_db.append(
+            {
+                "id": track_counter,
+                "filename": file.filename,
+                "fingerprint": audio,
+                "sr": sr,
+            }
+        )
 
         track_counter += 1
 
