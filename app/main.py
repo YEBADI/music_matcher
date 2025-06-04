@@ -1,9 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-import librosa
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
+from fastapi import Request
 from scipy.signal import correlate
+from pathlib import Path
+import librosa
 import numpy as np
 import os
-from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -15,9 +18,9 @@ fingerprint_db = []
 track_counter = 1
 
 
-@app.get("/")
-def read_root():
-    return {"status": "ok"}
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.post("/ingest")
