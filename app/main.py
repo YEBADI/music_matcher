@@ -6,7 +6,6 @@ from scipy.signal import correlate
 from pathlib import Path
 import librosa
 import numpy as np
-import os
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
