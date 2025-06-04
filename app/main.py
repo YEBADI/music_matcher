@@ -87,7 +87,7 @@ async def match(file: UploadFile = File(...)):
             highest_score = peak
             best_offset = offset
 
-    if not best_match:
+    if not best_match or highest_score is None or highest_score < 0.05:
         raise HTTPException(status_code=404, detail="No match found")
 
     return {
