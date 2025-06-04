@@ -7,6 +7,7 @@ from scipy.signal import correlate
 from pathlib import Path
 import librosa
 import numpy as np
+import io
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -23,9 +24,23 @@ def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.post("/clear", response_class=HTMLResponse)
+async def clear_cache(request: Request):
+    global fingerprint_db, track_counter
+    fingerprint_db.clear()
+    track_counter = 1
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "status": "cleared",
+        "ingested_tracks": [],
+        "match_result": None
+    })
+
 @app.post("/ingest")
-async def ingest(files: List[UploadFile] = File(...)):
+async def ingest(request:Request, files: List[UploadFile] = File(...)):
     global track_counter
+
+    ingested_tracks = []
 
     for file in files:
         if not (file.filename.endswith(".mp3") or file.filename.endswith(".wav")):
@@ -34,7 +49,6 @@ async def ingest(files: List[UploadFile] = File(...)):
         try:
             contents = await file.read()
             import io
-
             audio, sr = librosa.load(io.BytesIO(contents), sr=11025, mono=True)
         except Exception as e:
             continue  # Skip file on error, but continue with others
@@ -55,26 +69,55 @@ async def ingest(files: List[UploadFile] = File(...)):
             }
         )
 
+
+        ingested_tracks.append({
+            "track_id": track_counter,
+            "filename": file.filename,
+            "duration_sec": round(len(audio) / sr, 2),
+        })
+
         track_counter += 1
 
-    return RedirectResponse(url="/?status=ingested", status_code=303)
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "ingested": ingested_tracks
+        }
+    )
 
 
 @app.post("/match")
-async def match(file: UploadFile = File(...)):
+async def match(request: Request, file: UploadFile = File(...)):
     if not (file.filename.endswith(".mp3") or file.filename.endswith(".wav")):
-        raise HTTPException(
-            status_code=400, detail="Only .mp3 or .wav files are supported."
+        return templates.TemplateResponse(
+            "index.html",
+            {
+                "request": request,
+                "error": "Invalid file type. Please upload an MP3 or WAV.",
+                "ingested": [
+                    {"track_id": t["id"], "filename": t["filename"]}
+                    for t in fingerprint_db
+                ],
+            },
+            status_code=400
         )
 
     try:
         contents = await file.read()
-        import io
-
         query_audio, sr = librosa.load(io.BytesIO(contents), sr=11025, mono=True)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to process query audio: {e}"
+        return templates.TemplateResponse(
+            "index.html",
+            {
+                "request": request,
+                "error": f"Failed to process query audio: {e}",
+                "ingested": [
+                    {"track_id": t["id"], "filename": t["filename"]}
+                    for t in fingerprint_db
+                ],
+            },
+            status_code=500
         )
 
     query_audio = query_audio - np.mean(query_audio)
@@ -100,11 +143,22 @@ async def match(file: UploadFile = File(...)):
             best_offset = offset
 
     if not best_match or highest_score is None or highest_score < 0.05:
-        raise HTTPException(status_code=404, detail="No match found")
+        match_result = {"message": "No match found."}
+    else:
+        match_result = {
+            "filename": best_match["filename"],
+            "score": round(float(highest_score), 4),
+            "offset": round(best_offset, 2),
+        }
 
-    return {
-        "match_track_id": best_match["id"],
-        "filename": best_match["filename"],
-        "timestamp_offset_sec": round(best_offset, 2),
-        "confidence_score": round(float(highest_score), 4),
-    }
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "match_result": match_result,
+            "ingested": [
+                {"track_id": t["id"], "filename": t["filename"]}
+                for t in fingerprint_db
+            ],
+        }
+    )

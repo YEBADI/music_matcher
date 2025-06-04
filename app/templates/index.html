@@ -21,5 +21,38 @@
       <input type="file" name="file" accept=".mp3,.wav" required />
       <button type="submit">Match</button>
     </form>
+
+    {% if ingested %}
+      <h3>Ingested Tracks:</h3>
+      <ul>
+        {% for track in ingested %}
+          <li>{{ track.track_id }}: {{ track.filename }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if match_result %}
+      <h3>Match Result:</h3>
+      {% if match_result.message %}
+        <p>{{ match_result.message }}</p>
+      {% else %}
+        <p>Matched: {{ match_result.filename }}</p>
+        <p>Score: {{ match_result.score }}</p>
+        <p>Offset: {{ match_result.offset }}s</p>
+      {% endif %}
+    {% endif %}
+
+    {% if error %}
+      <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <!-- Clear cache -->
+    <form action="/clear" method="post" style="margin-top: 20px;">
+      <button type="submit">❌ Clear All Ingested Tracks</button>
+    </form>
+
+    {% if status == "cleared" %}
+      <p style="color: red;">Track cache cleared.</p>
+    {% endif %}
   </body>
 </html>
