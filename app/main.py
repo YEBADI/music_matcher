@@ -29,15 +29,19 @@ async def clear_cache(request: Request):
     global fingerprint_db, track_counter
     fingerprint_db.clear()
     track_counter = 1
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "status": "cleared",
-        "ingested_tracks": [],
-        "match_result": None
-    })
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "status": "cleared",
+            "ingested_tracks": [],
+            "match_result": None,
+        },
+    )
+
 
 @app.post("/ingest")
-async def ingest(request:Request, files: List[UploadFile] = File(...)):
+async def ingest(request: Request, files: List[UploadFile] = File(...)):
     global track_counter
 
     ingested_tracks = []
@@ -49,6 +53,7 @@ async def ingest(request:Request, files: List[UploadFile] = File(...)):
         try:
             contents = await file.read()
             import io
+
             audio, sr = librosa.load(io.BytesIO(contents), sr=11025, mono=True)
         except Exception as e:
             continue  # Skip file on error, but continue with others
@@ -69,21 +74,18 @@ async def ingest(request:Request, files: List[UploadFile] = File(...)):
             }
         )
 
-
-        ingested_tracks.append({
-            "track_id": track_counter,
-            "filename": file.filename,
-            "duration_sec": round(len(audio) / sr, 2),
-        })
+        ingested_tracks.append(
+            {
+                "track_id": track_counter,
+                "filename": file.filename,
+                "duration_sec": round(len(audio) / sr, 2),
+            }
+        )
 
         track_counter += 1
 
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "ingested": ingested_tracks
-        }
+        "index.html", {"request": request, "ingested": ingested_tracks}
     )
 
 
@@ -100,7 +102,7 @@ async def match(request: Request, file: UploadFile = File(...)):
                     for t in fingerprint_db
                 ],
             },
-            status_code=400
+            status_code=400,
         )
 
     try:
@@ -117,7 +119,7 @@ async def match(request: Request, file: UploadFile = File(...)):
                     for t in fingerprint_db
                 ],
             },
-            status_code=500
+            status_code=500,
         )
 
     query_audio = query_audio - np.mean(query_audio)
@@ -157,8 +159,7 @@ async def match(request: Request, file: UploadFile = File(...)):
             "request": request,
             "match_result": match_result,
             "ingested": [
-                {"track_id": t["id"], "filename": t["filename"]}
-                for t in fingerprint_db
+                {"track_id": t["id"], "filename": t["filename"]} for t in fingerprint_db
             ],
-        }
+        },
     )
