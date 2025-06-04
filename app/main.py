@@ -2,6 +2,11 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 import librosa
 from scipy.signal import correlate
 import numpy as np
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app = FastAPI()
 
