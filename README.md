@@ -10,3 +10,5 @@ Testing:
 - For positive testing, all 10 tracks are loaded, pre-generated query clips are then randomly selected and checked against the database. Tests pass if the query matches against the known matching track and fails if it mis-matches.
 - For negative testing, a track not within the database has been sampled and this is posed as a query. Test passes when this fails to match.
 - For testing file type, a non .wav .mp3 file is attempted to be ingested. Test passes when this fails.
+- I have also incorporated a CLI evaluation which benchmarks the app's accuracy, memory usage, average query latency and provides data on match scoring for each sample against the known origin track.
+![Evaluation result](figures/assessment.png)
