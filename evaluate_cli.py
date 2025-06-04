@@ -1,5 +1,4 @@
 import os
-import io
 import time
 import argparse
 import librosa
@@ -7,9 +6,6 @@ import numpy as np
 import psutil
 from scipy.signal import correlate
 from app.main import fingerprint_db, track_counter
-
-# Global
-track_counter = 1
 
 
 def normalize_audio(audio):
