@@ -7,12 +7,14 @@ This was inspired by [Will Drevo's blog post on audio fingerprinting](https://wi
 
 Features:
 - Upload `.mp3` or `.wav` files via web interface.
-- Generate fingerprints and match noisy audio clips
+- Generate database of fingerprints and match noisy audio clips
 - Real-time match with timestamp offset and confidence score
 - CLI evaluator for benchmarking accuracy, latency, and memory
 - Automated test suite with Pytest
 - Fully containerised via Docker
 - Modern FastAPI frontend with HTML/Jinja templates
+
+![Workflow](figures/workflow.png)
 
 ---
 
