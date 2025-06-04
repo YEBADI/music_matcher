@@ -1,11 +1,25 @@
-from fastapi import FastAPI, Request, UploadFile, File
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-import os
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Music Matcher</title>
+  </head>
+  <body>
+    <h1>Welcome to Music Matcher</h1>
+    <p>Upload tracks to ingest or match a query against your database.</p>
 
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+    <!-- Ingest multiple tracks -->
+    <form action="/ingest" method="post" enctype="multipart/form-data">
+      <h3>Ingest Tracks</h3>
+      <input type="file" name="files" accept=".mp3,.wav" multiple required />
+      <button type="submit">Ingest</button>
+    </form>
 
-@app.get("/", response_class=HTMLResponse)
-def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    <!-- Match a single query -->
+    <form action="/match" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+      <h3>Match Query</h3>
+      <input type="file" name="file" accept=".mp3,.wav" required />
+      <button type="submit">Match</button>
+    </form>
+  </body>
+</html>

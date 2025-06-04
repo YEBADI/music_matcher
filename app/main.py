@@ -1,7 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi import Request
+from typing import List
 from scipy.signal import correlate
 from pathlib import Path
 import librosa
@@ -16,56 +17,42 @@ app = FastAPI()
 fingerprint_db = []
 track_counter = 1
 
-
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-
 @app.post("/ingest")
-async def ingest(file: UploadFile = File(...)):
+async def ingest(files: List[UploadFile] = File(...)):
     global track_counter
 
-    if not (file.filename.endswith(".mp3") or file.filename.endswith(".wav")):
-        raise HTTPException(
-            status_code=400, detail="Only .mp3 or .wav files are supported."
-        )
+    for file in files:
+        if not (file.filename.endswith(".mp3") or file.filename.endswith(".wav")):
+            continue  # Skip non-audio files silently
 
-    try:
-        contents = await file.read()
-        # Use librosa with audioread backend (FFmpeg) to load MP3
-        import io
+        try:
+            contents = await file.read()
+            import io
+            audio, sr = librosa.load(io.BytesIO(contents), sr=11025, mono=True)
+        except Exception as e:
+            continue  # Skip file on error, but continue with others
 
-        audio, sr = librosa.load(io.BytesIO(contents), sr=11025, mono=True)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process audio: {e}")
+        # Normalise the waveform
+        audio = audio - np.mean(audio)
+        norm = np.linalg.norm(audio)
+        if norm > 0:
+            audio = audio / norm
 
-    # Normalise the waveform
-    audio = audio - np.mean(audio)
-    norm = np.linalg.norm(audio)
-    if norm > 0:
-        audio = audio / norm
-
-    # Store
-    fingerprint_db.append(
-        {
+        #Store
+        fingerprint_db.append({
             "id": track_counter,
             "filename": file.filename,
             "fingerprint": audio,
             "sr": sr,
-        }
-    )
+        })
 
-    track_id = track_counter
-    track_counter += 1
+        track_counter += 1
 
-    return {
-        "status": "ingested",
-        "track_id": track_id,
-        "filename": file.filename,
-        "sample_rate": sr,
-        "duration_sec": round(len(audio) / sr, 2),
-    }
+    return RedirectResponse(url="/?status=ingested", status_code=303)
 
 
 @app.post("/match")
