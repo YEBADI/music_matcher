@@ -4,8 +4,9 @@ librosa
 scipy
 numpy
 pytest
+psutil
 httpx
 python-multipart
 black
 ruff
-Jinja2
+jinja2
