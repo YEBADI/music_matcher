@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import librosa
+from scipy.signal import correlate
 import numpy as np
 
 app = FastAPI()
@@ -7,8 +8,6 @@ app = FastAPI()
 # fingerprint memory store
 fingerprint_db = []
 track_counter = 1
-
-
 
 @app.get("/")
 def read_root():
@@ -52,4 +51,48 @@ async def ingest(file: UploadFile = File(...)):
         "filename": file.filename,
         "sample_rate": sr,
         "duration_sec": round(len(audio) / sr, 2),
+    }
+
+@app.post("/match")
+async def match(file: UploadFile = File(...)):
+    if not (file.filename.endswith(".mp3") or file.filename.endswith(".wav")):
+        raise HTTPException(status_code=400, detail="Only .mp3 or .wav files are supported.")
+
+    try:
+        contents = await file.read()
+        import io
+        query_audio, sr = librosa.load(io.BytesIO(contents), sr=11025, mono=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process query audio: {e}")
+
+    query_audio = query_audio - np.mean(query_audio)
+    norm = np.linalg.norm(query_audio)
+    if norm > 0:
+        query_audio = query_audio / norm
+
+    best_match = None
+    highest_score = -1
+    best_offset = 0
+
+    for track in fingerprint_db:
+        stored_audio = track["fingerprint"]
+
+        # Correlate full audio with the short query
+        correlation = correlate(stored_audio, query_audio, mode="valid")
+        peak = np.max(correlation)
+        offset = np.argmax(correlation) / track["sr"]  # seconds
+
+        if peak > highest_score:
+            best_match = track
+            highest_score = peak
+            best_offset = offset
+
+    if not best_match:
+        raise HTTPException(status_code=404, detail="No match found")
+
+    return {
+        "match_track_id": best_match["id"],
+        "filename": best_match["filename"],
+        "timestamp_offset_sec": round(best_offset, 2),
+        "confidence_score": round(float(highest_score), 4),
     }
