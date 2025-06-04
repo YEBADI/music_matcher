@@ -23,7 +23,10 @@ def ingest_all_tracks():
                     "/ingest",
                     files=[("files", (filename, f, "audio/mpeg"))],  # updated here
                 )
-                assert response.status_code in [200, 303], f"Failed to ingest {filename}: {response.status_code}"
+                assert response.status_code in [
+                    200,
+                    303,
+                ], f"Failed to ingest {filename}: {response.status_code}"
 
 
 def get_random_queries(n=3):
