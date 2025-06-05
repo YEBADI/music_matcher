@@ -10,9 +10,10 @@ In the current implementation, the end user uploads the audio (MP3/WAV) via the 
 
 #### 2. Audio Matching Workflow
 
+In the current implementation, the matching workflow utilisies an immediate processing of the uploaded query file and matching - which means it is slow and has no fault tolerance. In a scaled up version, the API would accept the clip (saving temporarily to S3) and return a request ID. A Celery background worker can then processes the query clip to obtain a fingerprint and then search the fingerprint database for the best match (using cross-correlation). This search can be accelerated with proper indexing or using an algorithm optimized for audio fingerprints. Furthermore, decoupling the process means that we can implement batching of the fingerprint matching - this means fault tolerance is also introduced as, if a worker crashes, it does not halt the entire process. It also means that if multiple requests come in, it does not block the API. Everything is queued and workers can be scaled up accordingly.
+
 #### 3. Scalable Storage & Fault Tolerance
-* Fingerprint Store:
-* Object Storage:
-* API Layer:
-* Asynchronous Processing: 
+* Audio and fingerprint storage: In the current implementation we are using simple in memory storage. A scaled up version needs persistent storage. Using S3 for object (audio file) storage and using a managed PostgreSQL (Amazon RDS) or Aurora instance (which regularly backs up and means high fault tolerance in case of system outage) is the optimal way to address the needs of the app. Storing audio files in S3 also allows for horizontal scaling as workers can access the data from a shared resource and not just simple memory.
+* API Layer: The scaled up version of Music Matcher will have a stateless FastAPI (meaning it won't need to handle previous requests made to it and can handle each request indeopendelty). This allows for background scaling depending on the needs at the time. FastAPI and Uvicorn have the capability to provide this already.
+* Asynchronous Processing: Decoupling processes and using Celery workers with queue management via AWS SQS means we can batch processes and can be reseliant to faults. 
 
